@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BigQuery Release Notes Explorer</title>
+    <meta name="description" content="Explore, filter, search and share the latest Google Cloud BigQuery release notes and updates.">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="app-background">
+        <div class="gradient-sphere sphere-1"></div>
+        <div class="gradient-sphere sphere-2"></div>
+    </div>
+
+    <header class="app-header">
+        <div class="header-container">
+            <div class="logo-area">
+                <div class="logo-icon">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="url(#logoGrad)" stroke="currentColor" stroke-width="0.5"/>
+                        <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <defs>
+                            <linearGradient id="logoGrad" x1="2" y1="2" x2="22" y2="12" gradientUnits="userSpaceOnUse">
+                                <stop stop-color="#38bdf8"/>
+                                <stop offset="1" stop-color="#3b82f6"/>
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                </div>
+                <div class="logo-text">
+                    <h1>BigQuery</h1>
+                    <span>Release Notes Hub</span>
+                </div>
+            </div>
+
+            <div class="header-actions">
+                <button id="refreshBtn" class="btn btn-primary" title="Refresh Release Notes">
+                    <svg class="icon spinner" id="refreshIcon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M21.5 2V6H17.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M21.34 11.5A9 9 0 1 1 18.53 5.47L21.5 8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span>Refresh</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="app-container">
+        <!-- Dashboard Toolbar -->
+        <section class="toolbar-section">
+            <div class="search-box">
+                <div class="search-icon">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M21 21L15 15M17 10C17 13.866 13.866 17 10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <input type="text" id="searchInput" placeholder="Search updates (e.g. Gemini, Dataform, materialized views...)" autocomplete="off">
+                <button id="clearSearchBtn" class="clear-search-btn" style="display: none;">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="filter-tabs-wrapper">
+                <div class="filter-tabs" id="filterTabs">
+                    <button class="filter-tab active" data-type="all">All <span class="badge" id="count-all">0</span></button>
+                    <button class="filter-tab" data-type="feature">Features <span class="badge" id="count-feature">0</span></button>
+                    <button class="filter-tab" data-type="announcement">Announcements <span class="badge" id="count-announcement">0</span></button>
+                    <button class="filter-tab" data-type="change">Changes <span class="badge" id="count-change">0</span></button>
+                    <button class="filter-tab" data-type="issue">Issues <span class="badge" id="count-issue">0</span></button>
+                    <button class="filter-tab" data-type="breaking">Breaking <span class="badge" id="count-breaking">0</span></button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Stats Overview -->
+        <section class="stats-section" id="statsSection">
+            <div class="stat-card">
+                <span class="stat-label">Total Updates</span>
+                <span class="stat-value" id="statTotal">0</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-label">Last Checked</span>
+                <span class="stat-value" id="statLastChecked">Never</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-label">Latest Date</span>
+                <span class="stat-value" id="statLatestDate">-</span>
+            </div>
+        </section>
+
+        <!-- Release Notes Feed -->
+        <section class="feed-section">
+            <div class="loading-state" id="loadingState">
+                <div class="spinner-large"></div>
+                <p>Fetching BigQuery release notes...</p>
+            </div>
+
+            <div class="error-state" id="errorState" style="display: none;">
+                <div class="error-icon">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 9V14M12 17.01H12.01M5.07107 19H18.9289C20.4704 19 21.4323 17.3276 20.6585 15.9924L13.73 4.09238C12.9599 2.76044 11.0401 2.76044 10.27 4.09238L3.34148 15.9924C2.56773 17.3276 3.52957 19 5.07107 19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <h3>Failed to load release notes</h3>
+                <p id="errorMessage">Please check your network connection and try again.</p>
+                <button id="retryBtn" class="btn btn-secondary">Try Again</button>
+            </div>
+
+            <div class="empty-state" id="emptyState" style="display: none;">
+                <div class="empty-icon">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M21 21L15 15M17 10C17 13.866 13.866 17 10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <h3>No release notes match your query</h3>
+                <p>Try clearing your filters or typing a different search query.</p>
+                <button id="resetFiltersBtn" class="btn btn-secondary">Reset Filters</button>
+            </div>
+
+            <div class="notes-grid" id="notesGrid">
+                <!-- Cards injected via JavaScript -->
+            </div>
+        </section>
+    </main>
+
+    <!-- Floating Tweet Drawer / Action Panel -->
+    <div class="floating-panel" id="tweetPanel">
+        <div class="panel-content">
+            <div class="panel-header">
+                <h3>Share selected update</h3>
+                <button id="closePanelBtn" class="close-panel-btn" title="Close Panel">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="tweet-preview-card">
+                <div class="tweet-preview-header">
+                    <div class="avatar">BQ</div>
+                    <div class="author-info">
+                        <span class="author-name">BigQuery Updates</span>
+                        <span class="author-handle">@BigQueryUpdates</span>
+                    </div>
+                    <div class="x-logo">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                        </svg>
+                    </div>
+                </div>
+                <div class="tweet-text-area" id="tweetPreviewText">
+                    Select an update to preview and edit your tweet.
+                </div>
+                <div class="char-counter" id="charCounter">280</div>
+            </div>
+            <div class="panel-actions">
+                <button class="btn btn-secondary" id="deselectBtn">Cancel</button>
+                <button class="btn btn-x" id="sendTweetBtn">
+                    <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                    </svg>
+                    <span>Post on X</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
